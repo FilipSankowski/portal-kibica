@@ -1,0 +1,92 @@
+version: "3"
+services:
+    redis:
+        image: redis:alpine
+        ports:
+            - 6379:6379
+        expose:
+            - 6379
+        volumes:
+            - redis-volume:/data
+        networks:
+            - app
+        healthcheck:
+            test: 
+                - CMD
+                - redis-cli
+                - ping
+                - '|'
+                - grep
+                - PONG
+            retries: 3
+            timeout: 5s
+
+    next:
+        image: node:slim
+        ports:
+            - 3000:3000
+        expose:
+            - 3000
+        working_dir: /usr/src/app
+        volumes:
+            - ./frontend:/usr/src/app
+            - next-volume:/usr/src/app/node_modules
+        networks:
+            - app
+        command: 
+            - bash 
+            - -c 
+            - |
+                npm i
+                npm run dev
+        stop_grace_period: 1s
+        healthcheck:
+            test: 
+                - CMD
+                - curl
+                - --fail
+                - http://localhost:3000
+            retries: 3
+            timeout: 5s
+
+    laravel:
+        image: composer:latest
+        ports:
+            - 8000:8000
+        expose:
+            - 8000
+        working_dir: /var/www/html
+        volumes:
+            - ./backend:/var/www/html
+            - laravel-volume:/var/www/html/vendor
+        networks:
+            - app
+        command: 
+            - bash
+            - -c
+            - | 
+                composer install
+                php artisan serve
+        stop_grace_period: 1s
+        depends_on:
+            - redis
+        healthcheck:
+            test: 
+                - CMD
+                - curl
+                - --fail
+                - http://localhost:8000
+            retries: 3
+            timeout: 5s
+
+networks:
+    app:
+        driver: bridge
+
+volumes:
+    redis-volume:
+        driver: local
+    next-volume:
+        driver: local
+    laravel-volume:
+        driver: local
