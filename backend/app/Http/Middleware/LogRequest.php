@@ -16,7 +16,7 @@ class LogRequest
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (config('logging.logRequests', 'false')) {
+        if (config('logging.log_requests', 'false')) {
             $method = $request->method();
             Log::info("Request received:\n$request\n");
         }

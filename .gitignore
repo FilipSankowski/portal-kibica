@@ -1,3 +1,5 @@
+.env
+
 /backend/.phpunit.cache
 /backend/node_modules
 /backend/public/build

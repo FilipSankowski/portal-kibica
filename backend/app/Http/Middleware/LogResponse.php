@@ -17,7 +17,7 @@ class LogResponse
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
-        if (config('logging.logResponses', 'false')) {
+        if (config('logging.log_responses', 'false')) {
             Log::info("Response sent:\n$response\n");
         }
 
