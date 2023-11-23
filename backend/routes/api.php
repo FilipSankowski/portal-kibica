@@ -20,5 +20,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::controller(FetchController::class)->group(function() {
-    Route::get('/football', 'football');
+    Route::get('/leagues', 'getLeagues');
+    Route::get('/matches', 'getMatchesByLeague');
+    Route::get('/match/{matchId}', 'getMatch');
+    Route::get('/teams', 'getTeamsByLeague');
+    Route::get('/team/{teamId}', 'getTeam');
 });
