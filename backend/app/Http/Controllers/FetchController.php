@@ -11,58 +11,64 @@ class FetchController extends Controller
 {
     // Returns data from redis server if there is an index resembling specified url
     // Otherwise fetches data from url provided, saves it in redis , then returns it
-    private function getData($urlParams) {
-        $data = unserialize(Redis::get($urlParams));
+    private function getData(string $redisKey, string $url) {
+
+        function fetchData(string $url) {
+            $data = Http::withHeaders(['Authorization' => env('API_KEY')])->get($url)->json();
+            Log::alert("Fetching /$url...\n");
+
+            if ($data['pagination']['has_more']) {
+                $data['data'] = array_merge($data['data'], fetchData($data['pagination']['next_page']));
+            }
+
+            return $data['data'];
+        }
+
+        $data = unserialize(Redis::get($redisKey));
         if (!$data) {
-            $data = Http::withHeaders(['x-rapidapi-key' => env('RAPIDAPI_KEY')])->get('https://v3.football.api-sports.io/'.$urlParams)->json();
-            Log::alert("Fetching /$urlParams...\n");
-            Redis::set($urlParams, serialize($data));
+            $data = fetchData($url);
+            Redis::set($redisKey, serialize($data));
         }
         return $data;
     }
 
     // Get all leagues
     public function getLeagues() { 
-        return $this->getData('leagues')['response'];
+        return $this->getData('leagues', 'https://api.sportmonks.com/v3/football/leagues?per_page=50');
     }
 
     // Get the matches from league and season specified in request parameters
-    public function getMatchesByLeague(Request $request) { 
-        if (!$request->has(['season', 'league'])) {return response('Season and league information required in request', 400);}
-
-        return $this->getData('fixtures?season='.$request->season.'&league='.$request->league)['response'];
+    public function getMatches() { 
+        return $this->getData('matches', 'https://api.sportmonks.com/v3/football/fixtures?per_page=50');
     }
 
     // Get singular match of specified id. If season and league info is present, will attempt to filter data from other league matches
-    public function getMatch(string $matchId, Request $request) { 
-        if ($request->has(['season', 'league'])) {
-            $matches = $this->getData('fixtures?season='.$request->season.'&league='.$request->league)['response'];
-            foreach ($matches as $match) {
-                if ($match['fixture']['id'] == $matchId) return $match;
-            }
+    public function getMatch(string $matchId) { 
+        $matches = $this->getData('matches', 'https://api.sportmonks.com/v3/football/fixtures?per_page=50');
+
+        foreach ($matches as $match) {
+            if ($match['id'] === intval($matchId)) return $match;
         }
-        return $this->getData('fixtures?id='.$matchId)['response'][0];
+
+        return ['name' => 'No match with specified ID'];
     }
 
     // Get the teams from league and season specified in request parameters
-    public function getTeamsByLeague(Request $request) { 
-        if (!$request->has(['season', 'league'])) {return response('Season and league information required in request', 400);}
-
-        return $this->getData('teams?season='.$request->season.'&league='.$request->league)['response'];
+    public function getTeams() { 
+        return $this->getData('teams', 'https://api.sportmonks.com/v3/football/teams?per_page=50');
     }
 
     // Get singular team of specified id. If season and league info is present, will attempt to filter data from other league teams
-    public function getTeam(string $teamId, Request $request) { 
-        if ($request->has(['season', 'league'])) {
-            $teams = $this->getData('teams?season='.$request->season.'&league='.$request->league)['response'];
-            foreach ($teams as $team) {
-                if ($team['team']['id'] == $teamId) return $team;
-            }
+    public function getTeam(string $teamId) { 
+        $teams = $this->getData('teams', 'https://api.sportmonks.com/v3/football/teams?per_page=50');
+        
+        foreach ($teams as $team) {
+            if ($team['id'] === intval($teamId)) return $team;
         }
-        return $this->getData('teams?id='.$teamId)['response'][0];
+        return ['name' => 'No team with specified ID'];
     }
 
-    // public function getPlayers() { //NOT OK
-    //     return $this->getData('players');
-    // }
+    public function getPlayers() {
+        return $this->getData('players', 'https://api.sportmonks.com/v3/football/players?per_page=50');
+    }
 }

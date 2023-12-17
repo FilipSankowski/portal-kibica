@@ -21,8 +21,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::controller(FetchController::class)->group(function() {
     Route::get('/leagues', 'getLeagues');
-    Route::get('/matches', 'getMatchesByLeague');
+    Route::get('/matches', 'getMatches');
     Route::get('/match/{matchId}', 'getMatch');
-    Route::get('/teams', 'getTeamsByLeague');
+    Route::get('/teams', 'getTeams');
     Route::get('/team/{teamId}', 'getTeam');
+    Route::get('/players', 'getPlayers');
 });
